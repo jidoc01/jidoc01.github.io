@@ -1,2 +1,552 @@
-Hi?
+---
+layout: default
+---
 
+<link rel="stylesheet" type="text/css" href="//undertalefonts.duodecima.technology/webfonts/stylesheet.css">
+
+<style type="text/css">
+    body {
+        background-color: black;
+        display: flex;
+        align-items: center;
+    }
+    canvas { 
+        margin: 0 auto;
+    }
+</style>
+
+<body onload="init();">
+    <canvas id="main-canvas" width="640" height="480"></canvas>
+</body>
+
+<script>
+    function isMobile(){
+        var UserAgent = navigator.userAgent;
+        if (UserAgent.match(/iPhone|iPod|Android|Windows CE|BlackBerry|Symbian|Windows Phone|webOS|Opera Mini|Opera Mobi|POLARIS|IEMobile|lgtelecom|nokia|SonyEricsson/i) != null || UserAgent.match(/LG|SAMSUNG|Samsung/) != null) {
+            return true;
+        } 
+        else {
+            return false;
+        }
+    }
+    if(isMobile()) {
+        location.href = '/cv/'; // cv로 가버렷
+    }
+</script>
+
+<script>
+    const fps = 30;
+    const usesBgm = true;
+    const buttonWidth = 130;
+    const buttons = function() {
+        var ret = [
+            { name: 'CV', link: '/cv/', x: 0, y: 428 },
+            { name: 'BLOG', link: '//blog.naver.com/jidoc01', x: 0, y: 428 },
+            { name: 'FIGHT', link: 'fight', x: 0, y: 428 },
+            { name: 'HEAL', link: 'heal', x: 0, y: 428 }
+        ];
+        var delta = (640 - (buttonWidth * ret.length)) / (ret.length + 1);
+        var x = delta;
+        for(var i = 0; i < ret.length; i++) {
+            ret[i]['x'] = x;
+            x += delta;
+            x += buttonWidth;
+        }
+        return ret;
+    } ();
+    const messages = [
+        "You feel like [w0.5]you're going to\nhave [w0.5]a good time.[w1]\nWhat would you do?",
+        "Birds are singing...[w1]\nFlowers are blooming...[w1]\nOn days like this...[w1][p]Kids should play [w0.5]Nintendo[w0.5]\nat home.[w1]\nWhat would you do?",
+        "I think [w0.5]Koreans are big fans of [w0.5]\nSans.[w1] They always yelling like,[w1]\n“WA! SANS!”"
+    ];
+    const bgmName = 'rse-legendary';
+    var canvas = null;
+    var ctx = null; 
+    var canvasView = null;
+    var ctxView = null; 
+    var isLoaded = false;
+    var images = {};
+    var sounds = {};
+    var objects = {};
+    var messageLines = [
+        '', '', ''
+    ];
+    var isMessageInterrupted = false;
+    var messageInterrupted = null;
+    var isAnimationPlaying = false;
+    var currentMouse = {
+        x: 0, y: 0
+    };
+    var title = 'jidoc01';
+    var titlePos = {
+        x: 280,
+        y: 75
+    };
+    function getImage(name) {
+        var path = '{{site.baseurl}}/assets/images/' + name + '.png';
+        return images[path]
+    }
+    function getSound(name) {
+        var path = '{{site.baseurl}}/assets/sounds/' + name + '.mp3';
+        if(path in sounds) {
+            return sounds[path];
+        } else {
+            var audio = new Audio(path);
+            sounds[path] = audio;
+            return audio;
+        }
+        return null;
+    }
+    function getSoundWav(name) {
+        var path = '{{site.baseurl}}/assets/sounds/' + name + '.wav';
+        if(path in sounds) {
+            return sounds[path];
+        } else {
+            var audio = new Audio(path);
+            sounds[path] = audio;
+            return audio;
+        }
+        return null;
+    }
+    function getObject(name) {
+        if(name in objects) {
+            return objects[name];
+        } else {
+            var obj = {
+                img: '',
+                x: 0,
+                y: 0
+            };
+            objects[name] = obj;
+            return obj;
+        }
+    }
+    function deleteObject(name) {
+        delete objects[name];
+    }
+    async function preloadImages() {
+        const imageList = [
+            'bg-sans', 
+            'faces', 'sans-1', 'sans-2',
+            'cut', 'miss'
+        ];
+        for(var i = 0; i < imageList.length; i++) {
+            var name = imageList[i];
+            var path = '{{site.baseurl}}/assets/images/' + name + '.png';
+            var promise = new Promise(function(resolve) {
+                var image = new Image();
+                image.onload = function() {
+                    resolve();
+                }
+                image.src = path;
+                images[path] = image;
+            });
+            await promise;
+        }
+    }
+    function drawText(str, size, x, y, color) {
+        ctx.font = size + 'px Determination Mono';
+        ctx.fillStyle = color;
+        ctx.fillText(str, x, y);
+    }
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    function isAlpha(ch) {
+        return /^[A-Z]$/i.test(ch);
+    }
+    function turnOffSmoothing(context) {
+        context['imageSmoothingEnabled']        = false;    /* standard */
+        context['mozImageSmoothingEnabled']     = false;    /* Firefox */
+        context['oImageSmoothingEnabled']       = false;    /* Opera */
+        context['webkitImageSmoothingEnabled']  = false;    /* Safari */
+        context['msImageSmoothingEnabled']      = false;    /* IE */
+    }
+    function interruptMessage(msg) {
+        if(isMessageInterrupted) {
+            return;
+        }
+        messageInterrupted = msg;
+        isMessageInterrupted = true;
+    }
+    function playAnim(name) {
+        const animList = {
+            'sans-evade': async function() {
+                async function showAttackEffect () { // show attack effect.
+                    var gfx = getObject('attack-effect');
+                    gfx['x'] = 320;
+                    gfx['y'] = 110;
+                    gfx['w'] = 17;
+                    gfx['h'] = 67;
+                    gfx['img'] = 'cut';
+                    for(var i = 0; i < 6; i++) {
+                        gfx['sx'] = 17 * i;
+                        gfx['sy'] = 0;
+                        await sleep(0.10 * 1000);
+                    }
+                    deleteObject('attack-effect');
+                };
+                async function showMissEffect () { // show miss effect.
+                    var gfx = getObject('miss');
+                    gfx['x'] = 200;
+                    gfx['y'] = 100;
+                    gfx['w'] = 200;
+                    gfx['h'] = 100;
+                    gfx['sx'] = 0;
+                    gfx['sy'] = 0;
+                    gfx['img'] = 'miss';
+                    for(var i = 0; i < 20; i++) {
+                        gfx['y'] += 5;
+                        await sleep(1000 / fps);
+                    }
+                    await sleep(0.5 * 1000);
+                    deleteObject('miss');
+                };
+                await (async function () { // move sans to the left
+                    for(var i = 0; i < 12; i++) {
+                        moveSans(-8, 0);
+                        await sleep(1000 / fps);
+                    }
+                }) ();
+                getSound('evasion').play();
+                await showAttackEffect();
+                await sleep(0.5 * 1000);
+                await showMissEffect();
+                await sleep(0.5 * 1000);
+                await (async function () { // move sans to the right
+                    for(var i = 0; i < 12; i++) {
+                        moveSans(+8, 0);
+                        await sleep(1000 / fps);
+                    }
+                }) ();
+            }
+        };
+        if(name in animList) {
+            isAnimationPlaying = true;
+            (async function () {
+                await animList[name] ();
+                isAnimationPlaying = false;
+            }) ();
+        }
+    }
+    function init() {
+        canvasView = document.getElementById('main-canvas');
+        if (canvasView.getContext) {
+            ctxView = canvasView.getContext('2d');
+            // create an empty canvas.
+            canvas = document.createElement('canvas');
+            canvas.width = canvasView.width;
+            canvas.height = canvasView.height;
+            ctx = canvas.getContext('2d');
+            // turn off anti-aliasing.
+            turnOffSmoothing(ctx);
+            turnOffSmoothing(ctxView);
+            //ctx.translate(0.5, 0.5);
+            //ctxView.translate(0.5, 0.5);
+            // add mouse/keyboard events.
+            canvasView.addEventListener("mousemove", onMouseMove, false);
+            canvasView.addEventListener("mousedown", onMouseDown, false);
+            document.onkeydown = onKeyDown;
+            //canvasView.addEventListener("keydown", onKeyDown, false);
+            // start main logics.
+            setInterval(render, 1000*(1/fps));
+            beginLoop();
+        } else {
+            alert('Got an error :p');
+            window.location.href = '/cv/';
+        }
+    }
+    function updateMouse(e) {
+        var rect = canvasView.getBoundingClientRect();
+        currentMouse = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+    function onMouseMove(e) {
+        updateMouse(e);
+    }
+    function onMouseDown(e) {
+        if(e.button != 0) { // only accepts left button.
+            return;
+        }
+        updateMouse(e);
+        for(var i = 0; i < buttons.length; i++) {
+            button = buttons[i];
+            name = button['name'];
+            x = button['x'];
+            y = button['y'];
+            w = buttonWidth;
+            h = 48;
+            if(currentMouse['x'] >= x && currentMouse['x'] <= x + w &&
+                currentMouse['y'] >= y && currentMouse['y'] <= y + h) {
+                if(button['link'] == 'heal') { // heal the character.
+                    tryHeal();
+                } 
+                else if(button['link'] == 'fight') { // fight against the opponent.
+                    tryFight();
+                }
+                else {
+                    //location.href = button['link'];
+                    window.open(button['link'], '_blank').focus();
+                }
+            }
+        }
+    }
+    function onKeyDown(e) {
+        return;
+        const delta = 5;
+        e = e || window.event;
+        if(e.keyCode == '38') { // up
+            titlePos['y'] -= delta;
+        } else if(e.keyCode == '40') { // down
+            titlePos['y'] += delta;
+        } else if(e.keyCode == '37') { // left
+            titlePos['x'] -= delta;
+        } else if(e.keyCode == '39') { // right
+            titlePos['x'] += delta;
+        }
+    }
+    async function beginLoop() {
+        async function beginHandleMessage() {
+            // var message = messages[Math.floor(Math.random() * messages.length)];
+            var messageNo = 0;
+            var message = '';
+            while(true) {
+                message = messages[messageNo];
+                var i = 0;
+                var line = 0;
+                var isMessageInterrupting = false;
+                messageLines = [
+                    '', '', ''
+                ];
+                while(i < message.length) {
+                    if(isMessageInterrupted && isMessageInterrupting == false) {
+                        message = messageInterrupted;
+                        isMessageInterrupting = true;
+                        i = 0;
+                        continue;
+                    }
+                    var ch = message[i++];
+                    if(ch == '[') {
+                        var opcode = message[i++];
+                        var operand='';
+                        while(i < message.length && message[i] != ']') {
+                            operand += message[i++];
+                        }
+                        i++;
+                        if(opcode == 'w') { // wait (unit: sec)
+                            secs = parseFloat(operand);
+                            for(var j = 0; j < secs * 10; j++) {
+                                if(isMessageInterrupted && isMessageInterrupting == false)
+                                    break;
+                                await sleep(100);
+                            }
+                        } else if(opcode == 'p') { // peep!
+                            line = 0;
+                            messageLines = [
+                                '', '', ''
+                            ];
+                        } else if(opcode == 's') { // play sound
+                            var audio = getSound(operand);
+                            audio.pause();
+                            audio.currentTime = 0;
+                            audio.play();
+                        } else if(opcode == 'a') { // play animation
+                            playAnim(operand);
+                        } else if(opcode == 'b') { // change sans body
+                            getObject('sans')['img'] = 'sans-'+operand;
+                        } else if(opcode == 'f') {
+                            setSansFace(parseInt(operand));
+                        } else if(opcode == '.') { // etc.
+                            if(operand == 'bgm-on') {
+                                if(usesBgm)
+                                    getSound(bgmName).play();
+                            } else if(operand == 'bgm-off') {
+                                if(usesBgm)
+                                    getSound(bgmName).pause();
+                            } else if(operand == 'wait-anim') {
+                                while(isAnimationPlaying) {
+                                    await sleep(100);
+                                }
+                            }
+                        }
+                    } else if(ch == '\n') {
+                        line++;
+                    } else {
+                        if(messageLines[line] == '') {
+                            if(line == 0) {
+                                messageLines[line] += '* ';
+                            } else {
+                                messageLines[line] += '  ';
+                            }
+                        }
+                        messageLines[line] += ch;
+                        if(isAlpha(ch)) {
+                            getSound('voice_sans').cloneNode().play();
+                        }
+                        await sleep(75);
+                    }
+                }
+                if(!isMessageInterrupted) {
+                    for(var i = 0; i < 50; i++) { // total: 5 secs
+                        if(isMessageInterrupted && isMessageInterrupting == false) {
+                            break;
+                        }
+                        await sleep(100);
+                    }
+                }
+                if(isMessageInterrupting && isMessageInterrupted) { // when interrupt ends
+                    isMessageInterrupted = false;
+                    await sleep(2 * 1000);
+                }
+                messageNo = (messageNo + 1) % messages.length;
+            }
+        }
+        async function beginHandleSansFace() {
+            const opened = 3*1000;
+            const closed = 0.25*1000;
+            while(true) {
+                // 1. opened
+                setSansFace(0);
+                var i = 0;
+                while(true) {
+                    if(i * 100 >= opened) {
+                        break;
+                    }
+                    await sleep(100);
+                    i += 1;
+                }
+                // 2. closed
+                setSansFace(5);
+                var i = 0;
+                while(true) {
+                    if(i * 100 >= closed) {
+                        break;
+                    }
+                    await sleep(100);
+                    i += 1;
+                }
+            }
+        }
+
+        await preloadImages();
+        // sans
+        obj = getObject('sans');
+        obj['img'] = 'sans-1';
+        obj['x'] = 240;
+        obj['y'] = 90;
+        obj['sx'] = 0;
+        obj['sy'] = 0;
+        obj['w'] = 200;
+        obj['h'] = 100;
+        // face
+        obj = getObject('face');
+        obj['img'] = 'faces';
+        obj['x'] = 286;
+        obj['y'] = 90-8;
+        obj['sx'] = 36*0;
+        obj['sy'] = 0;
+        obj['w'] = 32;
+        obj['h'] = 28;
+
+        isLoaded = true;
+
+        if(usesBgm) {
+            var bgm = getSound(bgmName);
+            if (typeof bgm.loop == 'boolean')
+            {
+                bgm.loop = true;
+            }
+            else
+            {
+                bgm.addEventListener('ended', function() {
+                    this.currentTime = 0;
+                    this.play();
+                }, false);
+            }
+            bgm.play();
+        }
+        await sleep(5 * 1000);
+        beginHandleMessage();
+        beginHandleSansFace();
+    }
+    function render() {
+        if(isLoaded == false) {
+            return;
+        }
+        function drawBg() {
+            ctx.drawImage(getImage('bg-sans'), 0, 0);
+        }
+        function drawMessage() {
+            for(var i = 0; i < messageLines.length; i++) {
+                drawText(messageLines[i], 32, 85 - 30, 295 + (i * 32), 'white');
+            }
+        }
+        function drawButton() {
+            hovered = false;
+            for(var i = 0; i < buttons.length; i++) {
+                button = buttons[i];
+                name = button['name'];
+                x = button['x'];
+                y = button['y'];
+                w = buttonWidth;
+                h = 48;
+                color = 'orange';
+                if(currentMouse['x'] >= x && currentMouse['x'] <= x + w &&
+                    currentMouse['y'] >= y && currentMouse['y'] <= y + h) {
+                    color = 'yellow';
+                    hovered = true;
+                } else {
+                    color = 'orange';
+                }
+                // box
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x, y, w, h);
+                // text
+                drawText(name, 52, x + (w / 2) - (name.length / 2) * 26, y + 40 - 1, color);
+            }
+            if(hovered) {
+                canvasView.style.cursor = 'pointer';
+            } else {
+                canvasView.style.cursor = 'default';
+            }
+        }
+        function drawObject() {
+            for(var name in objects) {
+                var obj = objects[name];
+                ctx.drawImage(getImage(obj['img']), obj['sx'], obj['sy'], obj['w'], obj['h'], obj['x'], obj['y'], obj['w']*2, obj['h']*2);
+            }
+        }
+        function drawTitle() {
+            drawText(title, 24, titlePos['x'], titlePos['y'], 'white');
+        }
+        drawBg();
+        drawMessage();
+        drawButton();
+        drawObject();
+        drawTitle();
+        ctxView.drawImage(canvas, 0, 0); // double-buffering
+    }
+    function tryHeal() {
+        interruptMessage('[srecovery][w0.5][.bgm-off][w3.0][p][b2][w0.5]...[w1]Wait.[w1] No healing.[w1][b1]\nFair play,[w0.5] please.[w0.5][.bgm-on]');
+    }
+    function tryFight() {
+        interruptMessage("[p][asans-evade][.wait-anim][b2][w0.5]...[w1]Wait.[w0.5] I haven't finished [w0.5]\nmy script yet.[w1][b1]\nDon't be evil, [w0.5]bro.");
+    }
+    function setSansFace(i) {
+        getObject('face')['sx'] = 36*i;
+    }
+    function moveSans(dx, dy) {
+        // title
+        titlePos['x'] += dx;
+        titlePos['y'] += dy;
+        // sans
+        getObject('sans')['x'] += dx;
+        getObject('sans')['y'] += dy;
+        // face
+        getObject('face')['x'] += dx;
+        getObject('face')['y'] += dy;
+    }
+</script>

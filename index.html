@@ -73,7 +73,6 @@ layout: default
     var ctx = null; 
     var canvasView = null;
     var ctxView = null; 
-    var isLoaded = false;
     var images = {};
     var sounds = {};
     var objects = {};
@@ -104,7 +103,6 @@ layout: default
             sounds[path] = audio;
             return audio;
         }
-        return null;
     }
     function getSoundWav(name) {
         var path = '{{site.baseurl}}/assets/sounds/' + name + '.wav';
@@ -151,6 +149,28 @@ layout: default
                 images[path] = image;
             });
             await promise;
+            console.log('loaded: ' + path);
+        }
+    }
+    async function preloadAudios() {
+        const list = [
+            'evasion', 'recovery',
+            'rse-legendary',
+            'voice_sans'
+        ];
+        for(var i = 0; i < list.length; i++) {
+            var name = list[i];
+            var path = '{{site.baseurl}}/assets/sounds/' + name + '.mp3';
+            var promise = new Promise(function(resolve) {
+                var v = new Audio();
+                v.oncanplaythrough = function() {
+                    resolve();
+                }
+                v.src = path;
+                sounds[path] = v;
+            });
+            await promise;
+            console.log('loaded: ' + path);
         }
     }
     function drawText(str, size, x, y, color) {
@@ -258,7 +278,6 @@ layout: default
             document.onkeydown = onKeyDown;
             //canvasView.addEventListener("keydown", onKeyDown, false);
             // start main logics.
-            setInterval(render, 1000*(1/fps));
             beginLoop();
         } else {
             alert('Got an error :p');
@@ -440,6 +459,8 @@ layout: default
         }
 
         await preloadImages();
+        await preloadAudios();
+
         // sans
         obj = getObject('sans');
         obj['img'] = 'sans-1';
@@ -459,7 +480,7 @@ layout: default
         obj['w'] = 32;
         obj['h'] = 28;
 
-        isLoaded = true;
+        setInterval(render, 1000*(1/fps)); // start rendering.
 
         if(usesBgm) {
             var bgm = getSound(bgmName);
@@ -481,9 +502,6 @@ layout: default
         beginHandleSansFace();
     }
     function render() {
-        if(isLoaded == false) {
-            return;
-        }
         function drawBg() {
             ctx.drawImage(getImage('bg-sans'), 0, 0);
         }

@@ -3,6 +3,7 @@ layout: default
 ---
 
 <link rel="stylesheet" href="{{site.baseurl}}/assets/webfonts/stylesheet.css" type="text/css">
+<link rel="stylesheet" href="https://pro.fontawesome.com/releases/v6.0.0-beta1/css/all.css">
 
 <style type="text/css">
     body {
@@ -10,8 +11,36 @@ layout: default
         display: flex;
         align-items: center;
     }
-    canvas { 
+    footer {
+        margin-top: 20px;
+        color: white;
+        text-align: center;
+    }
+    .wrapper {
         margin: 0 auto;
+    }
+    .fa-heart {
+        color:red; 
+    }
+    a:link {
+        color: lightgreen;
+        background-color: transparent;
+        text-decoration: none;
+    }
+    a:visited {
+        color: lightgreen;
+        background-color: transparent;
+        text-decoration: none;
+    }
+    a:hover {
+        color: greenyellow;
+        background-color: transparent;
+        text-decoration: underline;
+    }
+    a:active {
+        color: white;
+        background-color: transparent;
+        text-decoration: underline;
     }
 </style>
 
@@ -26,7 +55,15 @@ layout: default
 </head>
 
 <body onload="init();">
-    <canvas id="main-canvas" width="640" height="480"></canvas>
+    <div class="wrapper">
+        <canvas id="main-canvas" width="640" height="480"></canvas>
+        <footer>
+            <!--/* This template is released under the Creative Commons Attribution 3.0 License. Please keep the attribution link below when using for your own project. */-->
+            <small>
+                Designed with <i class="fas fa-heart"></i> by <a href="https://github.com/jidoc01/jidoc01.github.io" target="_blank" rel="nofollow">JungHyun Kim</a>
+            </small>
+        </footer>
+    </div>
 </body>
 
 <script>

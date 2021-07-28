@@ -520,6 +520,7 @@
         async function beginHandleNyanCat() {
             interval = 3 * 1000;
             duration = 3 * 1000;
+            direction = 0;
 
             while(true) {
                 await sleep(interval);
@@ -530,12 +531,12 @@
                 // nyan.play();
 
                 meow = getObject('cat');
-                meow['x'] = -70;
+                meow['x'] = direction == 0 ? -70 : 640 + 70;
                 meow['y'] = 50 + Math.floor(Math.random() * 5) * 40;
 
                 i = 0;
                 while(i * 1000 / fps < duration) {
-                    meow['x'] += 20; // run
+                    meow['x'] += direction == 0 ? 20 : -20; // run
 
                     if(i % 5 == 0) { // bump
                         meow['sx'] += 70;
@@ -547,6 +548,8 @@
                     await sleep(1000 / fps);
                     i++;
                 }
+
+                direction = (direction + 1) % 2;
 
                 // nyan.pause();
             }

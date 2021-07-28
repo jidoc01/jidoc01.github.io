@@ -457,7 +457,8 @@
                         }
                         messageLines[line] += ch;
                         if(isAlpha(ch)) {
-                            getSound('voice_sans').cloneNode().play();
+                            getSound('voice_sans').currentTime = 0;
+                            getSound('voice_sans').play();
                         }
                         await sleep(75);
                     }

@@ -218,8 +218,8 @@
         const list = [
             'evasion', 'recovery',
             'rse-legendary',
-            'voice_sans',
-            'nyan-cat'
+            'voice_sans'/*,
+            'nyan-cat'*/
         ];
         for(var i = 0; i < list.length; i++) {
             var name = list[i];
@@ -518,26 +518,26 @@
             }
         }
         async function beginHandleNyanCat() {
-            interval = 5 * 1000;
+            interval = 3 * 1000;
             duration = 3 * 1000;
 
             while(true) {
                 await sleep(interval);
                 
-                nyan = getSound('nyan-cat');
-                nyan.currentTime = 0;
                 // 솔직히 너무 정신 사나워
+                // nyan = getSound('nyan-cat');
+                // nyan.currentTime = 0;
                 // nyan.play();
 
                 meow = getObject('cat');
                 meow['x'] = -70;
-                meow['y'] = 50 + Math.floor(Math.random() * 150);
+                meow['y'] = 50 + Math.floor(Math.random() * 5) * 40;
 
                 i = 0;
                 while(i * 1000 / fps < duration) {
-                    meow['x'] += 10; // run
+                    meow['x'] += 20; // run
 
-                    if(i % 10 == 0) { // bump
+                    if(i % 5 == 0) { // bump
                         meow['sx'] += 70;
                         if(meow['sx'] == 70*6) {
                             meow['sx'] = 0;

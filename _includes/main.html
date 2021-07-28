@@ -153,28 +153,11 @@
     };
     function getImage(name) {
         var path = '{{site.baseurl}}/assets/images/' + name + '.png';
-        return images[path]
+        return images[path];
     }
     function getSound(name) {
         var path = '{{site.baseurl}}/assets/sounds/' + name + '.mp3';
-        if(path in sounds) {
-            return sounds[path];
-        } else {
-            var audio = new Audio(path);
-            sounds[path] = audio;
-            return audio;
-        }
-    }
-    function getSoundWav(name) {
-        var path = '{{site.baseurl}}/assets/sounds/' + name + '.wav';
-        if(path in sounds) {
-            return sounds[path];
-        } else {
-            var audio = new Audio(path);
-            sounds[path] = audio;
-            return audio;
-        }
-        return null;
+        return sounds[path];
     }
     function getObject(name) {
         if(name in objects) {
@@ -193,48 +176,38 @@
         delete objects[name];
     }
     async function preloadImages() {
-        const imageList = [
-            'bg-sans', 
-            'faces', 'sans-1', 'sans-2',
-            'cut', 'miss',
-            'nyan-cat'
-        ];
-        for(var i = 0; i < imageList.length; i++) {
-            var name = imageList[i];
-            var path = '{{site.baseurl}}/assets/images/' + name + '.png';
-            var promise = new Promise(function(resolve) {
-                var image = new Image();
-                image.onload = function() {
-                    resolve();
-                }
-                image.src = path;
-                images[path] = image;
-            });
-            await promise;
-            console.log('loaded: ' + path);
-        }
+        {% for file in site.static_files %}
+            {% if file.path contains '.png' %}
+                path = "{{ site.baseurl }}{{ file.path }}";
+                var promise = new Promise(function(resolve) {
+                    var image = new Image();
+                    image.onload = function() {
+                        resolve();
+                    }
+                    image.src = path;
+                    images[path] = image;
+                });
+                await promise;
+                console.log('loaded: ' + path);
+            {% endif %}
+        {% endfor %}
     }
     async function preloadAudios() {
-        const list = [
-            'evasion', 'recovery',
-            'rse-legendary',
-            'voice_sans'/*,
-            'nyan-cat'*/
-        ];
-        for(var i = 0; i < list.length; i++) {
-            var name = list[i];
-            var path = '{{site.baseurl}}/assets/sounds/' + name + '.mp3';
-            var promise = new Promise(function(resolve) {
-                var v = new Audio();
-                v.oncanplaythrough = function() {
-                    resolve();
-                }
-                v.src = path;
-                sounds[path] = v;
-            });
-            await promise;
-            console.log('loaded: ' + path);
-        }
+        {% for file in site.static_files %}
+            {% if file.path contains '.mp3' %}
+                path = "{{ site.baseurl }}{{ file.path }}";
+                var promise = new Promise(function(resolve) {
+                    var v = new Audio();
+                    v.oncanplaythrough = function() {
+                        resolve();
+                    }
+                    v.src = path;
+                    sounds[path] = v;
+                });
+                await promise;
+                console.log('loaded: ' + path);
+            {% endif %}
+        {% endfor %}
     }
     function drawText(str, size, x, y, color) {
         ctx.font = size + 'px Determination Mono';

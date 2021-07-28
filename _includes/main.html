@@ -143,6 +143,7 @@
     var isMessageInterrupted = false;
     var messageInterrupted = null;
     var isAnimationPlaying = false;
+    var preloadStep = 0;
     var currentMouse = {
         x: 0, y: 0
     };
@@ -328,10 +329,22 @@
         updateMouse(e);
     }
     function onMouseDown(e) {
-        if(e.button != 0) { // only accepts left button.
+        if(e.button != 0) return; // only accepts left button.
+        updateMouse(e);
+
+        if(preloadStep == 0) {
             return;
         }
-        updateMouse(e);
+        if(preloadStep == 1) {
+            var x = 320 - 75;
+            var y = 240 - 16 - 20;
+            if (currentMouse['x'] >= x && currentMouse['x'] < x + 150 &&
+                currentMouse['y'] >= y && currentMouse['y'] < y + 30) {
+                preloadStep = 2;
+            }
+            return;
+        }
+
         for(var i = 0; i < buttons.length; i++) {
             button = buttons[i];
             name = button['name'];
@@ -528,8 +541,16 @@
             }
         }
 
+        // start rendering.
+        setInterval(render, 1000*(1/fps));
+
         await preloadImages();
         await preloadAudios();
+        preloadStep = 1;
+
+        while(preloadStep == 1) {
+            await sleep(100);
+        }
 
         function registerObject(name, img_name, x, y, sx, sy, w, h) {
             obj = getObject(name);
@@ -548,9 +569,6 @@
         registerObject('face', 'faces', 286, 90-8, 0, 0, 32, 28);
         // register nyan-cat!!!
         registerObject('cat', 'nyan-cat', -200, 70, 0, 0, 70, 40);
-
-        // start rendering.
-        setInterval(render, 1000*(1/fps));
 
         if(usesBgm) {
             var bgm = getSound(bgmName);
@@ -574,6 +592,14 @@
         beginHandleNyanCat();
     }
     function render() {
+        if(preloadStep <= 1) {
+            texts = ["Loading...", "Touch me!"];
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, 640, 480);
+            drawText(texts[preloadStep], 32, 320 - 75, 240 - 16, 'white');
+            ctxView.drawImage(canvas, 0, 0);
+            return;
+        }
         function drawBg() {
             ctx.drawImage(getImage('bg-sans'), 0, 0);
         }
